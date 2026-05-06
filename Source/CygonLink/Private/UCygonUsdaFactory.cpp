@@ -28,7 +28,7 @@ bool UCygonUsdaFactory::FactoryCanImport(const FString& Filename)
 
 UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, const FString& Filename, const TCHAR* Parms, FFeedbackContext* Warn, bool& bOutCanceled)
 {    
-    if (IsSimpleMeshe(CurrentFilename))
+    if (IsSimpleMesh(CurrentFilename))
     {
         UE_LOG(LogTemp, Warning, TEXT("Sub mesh ignored : %s"), *CurrentFilename);
     	bOutCanceled = true; 
@@ -96,7 +96,7 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	
 	FString SourceFilename = GetSourceFilename(Obj);
 	if (SourceFilename.IsEmpty()) return EReimportResult::Failed;
-	if (IsSimpleMeshe(SourceFilename)) return EReimportResult::Cancelled;
+	if (IsSimpleMesh(SourceFilename)) return EReimportResult::Cancelled;
 	
 	bIsHandlingProxyCygonReimport = true;
 	UE_LOG(LogTemp, Warning, TEXT("Asset update triggered on: %s"), *Obj->GetName());
@@ -166,7 +166,7 @@ bool UCygonUsdaFactory::IsCygonFile(const FString& Filename)
 	return false;
 }
 
-bool UCygonUsdaFactory::IsSimpleMeshe(const FString& Filename)
+bool UCygonUsdaFactory::IsSimpleMesh(const FString& Filename)
 {
 	FString NormalizedFilename = Filename;
 	FPaths::NormalizeFilename(NormalizedFilename);

@@ -20,7 +20,8 @@ public:
 
 	// #==================================================#
 	// # Import
-	// #==================================================# 
+	// #==================================================#
+	
 	/// Determines if this factory can import a specific file
 	/// @param Filename The full path to the file being evaluated for import
 	/// @return true if the file is a .usda file exported from Cygon, false otherwise
@@ -29,7 +30,8 @@ public:
 	
 	// #==================================================#
 	// # Reimport
-	// #==================================================# 
+	// #==================================================#
+	
 	/// Determines if this factory can handle the reimporting of a specific object
 	/// @param Obj The object to evaluate for reimport
 	/// @param OutFilenames An array that will be populated with the source filenames associated with the object
@@ -51,7 +53,7 @@ private:
 	/// Check if the file is a basic mesh imported via USD (and not a full scene)
 	/// @param Filename The file path to check
 	/// @return true if the file is a simple mesh, false otherwise
-	bool IsSimpleMeshe(const FString& Filename);
+	bool IsSimpleMesh(const FString& Filename);
 	
 	/// Retrieve the source filename from the AssetImportData of the given object, if it exists
 	/// @param Obj The object to retrieve the source filename from
