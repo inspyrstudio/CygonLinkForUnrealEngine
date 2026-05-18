@@ -2,12 +2,13 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "1.0",
+	"EngineVersion": "5.5.0",
 	"FriendlyName": "CygonLink",
-	"Description": "",
+	"Description": "Cygon Link is a bridge designed to connect Cygon seamlessly and directly to your favorite game engines. Built around the USDA (Universal Scene Description) format, it completely eliminates the friction of traditional export/import pipelines.Whether you are modifying geometry or tweaking transforms in Cygon, Cygon Link ensures your game engine is instantly updated. No more manual reimports.",
 	"Category": "Other",
-	"CreatedBy": "",
-	"CreatedByURL": "",
-	"DocsURL": "",
+	"CreatedBy": "Inspyr Studio",
+	"CreatedByURL": "https://inspyrstudio.com/",
+	"DocsURL": "https://github.com/inspyrstudio/CygonLinkForUnrealEngine/blob/master/README.md",
 	"MarketplaceURL": "",
 	"SupportURL": "",
 	"CanContainContent": true,
@@ -18,7 +19,8 @@
 		{
 			"Name": "CygonLink",
 			"Type": "Editor",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [ "Win64", "Mac" ]
 		}
 	],
 	"Plugins": [
