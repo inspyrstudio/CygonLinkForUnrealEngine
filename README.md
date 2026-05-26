@@ -40,6 +40,11 @@ If you prefer to compile the plugin yourself or need the latest development vers
 3. Live Editing Workflow: Keep your Unreal Engine Scene open. Open the source file in Cygon. Modify geometry or transforms and Export or Quick Export with CTRL + S.
 4. Switch back to Unreal Engine: the auto-reimport process will trigger, and your meshes will update instantly.
 
+## Dependencies
+This plugin has no third-party code or libraries. The only dependency is
+**USDImporter**, which is an Epic Games built-in Unreal Engine plugin
+(shipped with the engine itself).
+
 ## Miscellaneous
 ⚙️ Requirements
 Unreal Engine Version: 5.7 or higher (Tested on recent UE5.7 versions). Ensure the USD Importer plugin is enabled in your Unreal project.
