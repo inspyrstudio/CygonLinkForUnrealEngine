@@ -10,6 +10,21 @@ Cygon Link is a powerful bridge that provides a robust pipeline for bringing USD
 
 🛠️ **Intelligent Mesh Processing**: Uses Unreal Engine's native USD Importer under the hood while applying custom processing to ensure perfect results.
 
+## Documentation
+
+Full documentation is available in the [`Docs/`](Docs/) folder:
+
+| Guide | Description |
+|---|---|
+| [Prerequisites](Docs/Prerequisites.md) | Software requirements and enabling the USD Importer plugin |
+| [Installation](Docs/Installation.md) | Installing via Fab or from source |
+| [How It Works](Docs/HowItWorks.md) | Technical overview of the import pipeline |
+| [First Import](Docs/FirstImport.md) | Step-by-step guide for your first Cygon scene import |
+| [Live Sync](Docs/LiveSync.md) | Setting up real-time sync between Cygon and UE |
+| [Troubleshooting](Docs/Troubleshooting.md) | Common issues and fixes |
+
+A sample `.usda` file is included at [`Docs/CygonSample.usda`](Docs/CygonSample.usda) to verify the plugin works without needing Cygon installed.
+
 ## Getting Started
 
 ### Installation via Fab (Pre-compiled)
