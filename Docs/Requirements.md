@@ -7,7 +7,7 @@ Before using Cygon Link, make sure the following requirements are met.
 | Unreal Engine | 5.7+            | Tested on UE 5.7+                                            |
 | Cygon         | 0.2.3i+         | Earlier versions do not support the required export pipeline |
 
-> **New to Cygon?** Watch the [Cygon installation tutorial on YouTube](https://www.youtube.com/watch?v=SaS8J_4AumM) to get up and running. You can also request access on the [Inspyr Studio pricing page](https://inspyrstudio.com/pricing/) as Cygon is currently in closed beta.
+> **New to Cygon?** Watch the [Cygon installation tutorial on YouTube](https://www.youtube.com/watch?v=SaS8J_4AumM) to get up and running. And you can go see [what is cygon](WhatIsCygon.md) for a quick overview of the product.
 
 ## Required Unreal Engine Plugin
 Cygon Link relies on the **USD Importer** plugin, which ships with Unreal Engine but may be disabled by default.

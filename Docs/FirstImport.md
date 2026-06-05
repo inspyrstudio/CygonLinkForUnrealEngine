@@ -31,7 +31,7 @@ Content/
 If you just want to import a single `.usda` file without setting up the full Cygon export pipeline, you can drag it directly from your OS file explorer into the Unreal Engine Content Browser.
 Cygon Link will intercept the file, process it through the USD pipeline, and generate all the native UE assets (Static Meshes, Materials, etc.) just like a normal import.
 
-> **Important limitation:** This method does **not** support hot reload. If you later modify the scene in Cygon and re-export, Unreal Engine will not automatically detect and reimport the changes. For live sync to work, the file must be exported directly into the `Content/` folder as described in Step 1.
+> **Important limitation:** This method does **not** support hot reload (or Live Sync). If you later modify the scene in Cygon and re-export, Unreal Engine will not automatically detect and reimport the changes. For live sync to work, the file must be exported directly into the `Content/` folder as described in Step 1.
 
 ## Step 2 — Import into Unreal Engine
 - Switch to Unreal Engine. The Content Browser should detect the new files automatically. You may have to approve the import process in the Editor with with a pop-up.
