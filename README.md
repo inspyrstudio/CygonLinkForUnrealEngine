@@ -4,14 +4,24 @@ Seamless integration and live-sync for USDA files.
 Cygon Link is a powerful bridge that provides a robust pipeline for bringing USDA (Universal Scene Description) assets into Unreal Engine. It features a custom Factory for automated conversion. It also syncs changes from Cygon to Unreal Engine in real-time.
 
 ## Key Features
-📦 **Automated Asset Generation**: Converts USDA hierarchies, meshes, and materials directly into native Unreal Engine assets (Static Meshes, Materials, etc.) with collision support.
+- **Automated Asset Generation**: Converts USDA hierarchies, meshes, and materials directly into native Unreal Engine assets (Static Meshes, Materials, etc.) with collision support.
+- **Live Hot-Reloading / Reimport**: Detects file changes in Cygon and instantly updates all instances in your active Unreal Engine level.
+- **Intelligent Mesh Processing**: Uses Unreal Engine's native USD Importer under the hood while applying custom processing to ensure perfect results.
 
-🔥 **Live Hot-Reloading / Reimport**: Detects file changes in Cygon and instantly updates all instances in your active Unreal Engine level.
+## Documentation
 
-🛠️ **Intelligent Mesh Processing**: Uses Unreal Engine's native USD Importer under the hood while applying custom processing to ensure perfect results.
+Full documentation is available in the [`Docs/`](Docs/) folder:
+
+| Guide                                | Description                                                |
+|--------------------------------------|------------------------------------------------------------|
+| [Requirements](Docs/Requirements.md) | Software requirements and enabling the USD Importer plugin |
+| [Installation](Docs/Installation.md) | Installing via Fab or from source                          |
+| [FirstImport](Docs/FirstImport.md)   | Step-by-step guide for your Cygon scene import        |
+| [Live Sync](Docs/LiveSync.md)        | Setting up real-time sync between Cygon and UE             |
+
+A sample `.usda` file is included at [Docs/Samples](Docs/Samples) to verify the plugin works without needing Cygon installed.
 
 ## Getting Started
-
 ### Installation via Fab (Pre-compiled)
 The easiest way to get started is to get the pre-compiled plugin directly from Fab.
 
@@ -48,7 +58,7 @@ This plugin has no third-party code or libraries. The only dependency is
 ## Miscellaneous
 ⚙️ Requirements
 Unreal Engine Version: 5.7 or higher (Tested on recent UE5.7 versions). Ensure the USD Importer plugin is enabled in your Unreal project.
-Cygon Version: 0.2.0.7i minimum. (Note: versions prior to 0.2.0.7i do not support the proper export pipeline needed for engine integration).
+Cygon Version: 0.2.3i or higher. (Note: versions prior to 0.2.3i do not support the proper export pipeline needed for engine integration).
 
 🤝 Contributing
 Contributions are welcome! Please feel free to tell us about anything that doesn't work with the package on the Discord.
