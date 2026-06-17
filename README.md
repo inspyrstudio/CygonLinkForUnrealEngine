@@ -45,10 +45,10 @@ If you prefer to compile the plugin yourself or need the latest development vers
 - Open your project in Unreal Engine and click Yes when prompted to rebuild the missing modules, or build it directly from your IDE.
 
 ## How to use it?
-- Import your Assets: In Cygon export your level in the `Content` folder of your Unreal project. This will ensure that the plugin can find the files and reimport them correctly. To export you can use CTRL + S or the export button in the UI.
-- Add to Level: Drag the imported asset from the Content Browser into your Level Viewport or Outliner.
-- Live Editing Workflow: Keep your Unreal Engine Scene open. Open the source file in Cygon. Modify geometry or transforms and Export or Quick Export with CTRL + S.
-- Switch back to Unreal Engine: the auto-reimport process will trigger, and your meshes will update instantly.
+- **Import your assets**: In Cygon, export your level into the `Content/` folder of your Unreal project (CTRL + S or the export button). As long as the editor is open, Cygon Link detects the new files and imports them automatically — no pop-up, and no editor preferences to enable.
+- **Add to Level**: Drag the imported asset from the Content Browser into your Level Viewport or Outliner.
+- **Live Editing Workflow**: Keep your Unreal Engine project open. Open the source file in Cygon, modify geometry or transforms, and Export / Quick Export with CTRL + S.
+- **Switch back to Unreal Engine**: Cygon Link detects the change and reimports automatically — your meshes update without any manual step.
 
 ## Dependencies
 This plugin has no third-party code or libraries. The only dependency is
