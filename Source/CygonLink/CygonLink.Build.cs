@@ -34,6 +34,8 @@ public class CygonLink : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"AssetTools",
+				"DirectoryWatcher",
 			}
 		);
 		

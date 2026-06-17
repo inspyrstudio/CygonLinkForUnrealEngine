@@ -28,9 +28,9 @@ bool UCygonUsdaFactory::FactoryCanImport(const FString& Filename)
 
 UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, const FString& Filename, const TCHAR* Parms, FFeedbackContext* Warn, bool& bOutCanceled)
 {    
-    if (IsSimpleMesh(CurrentFilename))
+    if (IsSimpleMesh(Filename))
     {
-        UE_LOG(LogTemp, Warning, TEXT("Sub mesh ignored : %s"), *CurrentFilename);
+        UE_LOG(LogTemp, Warning, TEXT("Sub mesh ignored : %s"), *Filename);
     	bOutCanceled = true; 
         
     	return nullptr; 
@@ -44,7 +44,7 @@ UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent
 		DestPath = FPaths::GetPath(DestPath);
 	}
 
-	UAssetImportTask* ImportTask = CreateImportTask(CurrentFilename, DestPath);
+	UAssetImportTask* ImportTask = CreateImportTask(Filename, DestPath);
 	
 	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
 	AssetToolsModule.Get().ImportAssetTasks({ ImportTask });
@@ -64,14 +64,18 @@ bool UCygonUsdaFactory::CanReimport(UObject* Obj, TArray<FString>& OutFilenames)
     
 	if (SourceFilename.IsEmpty() || !SourceFilename.EndsWith(TEXT(".usda"))) return false;
 	
-	if (IsCygonFile(SourceFilename)) return true;
+	if (IsCygonFile(SourceFilename))
+	{
+		OutFilenames.Add(SourceFilename);
+		return true;
+	}
 	
 	return false;
 }
 
 void UCygonUsdaFactory::SetReimportPaths(UObject* Obj, const TArray<FString>& NewReimportPaths)
 {
-	if (!Obj) return;
+	if (!Obj || NewReimportPaths.Num() == 0) return;
 	
 	FObjectProperty* Prop = FindFProperty<FObjectProperty>(Obj->GetClass(), "AssetImportData");
 	UStaticMesh* SM = Cast<UStaticMesh>(Obj);
@@ -98,7 +102,7 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	if (SourceFilename.IsEmpty()) return EReimportResult::Failed;
 	if (IsSimpleMesh(SourceFilename)) return EReimportResult::Cancelled;
 	
-	bIsHandlingProxyCygonReimport = true;
+	TGuardValue<bool> ReentryGuard(bIsHandlingProxyCygonReimport, true);
 	UE_LOG(LogTemp, Warning, TEXT("Asset update triggered on: %s"), *Obj->GetName());
 	
 	FString UsdBaseName = FPaths::GetBaseFilename(SourceFilename); 
@@ -118,14 +122,10 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	}
 	UAssetImportTask* ImportTask = CreateImportTask(SourceFilename, DestPath);
 	
-	bool bWasUnattended = GIsRunningUnattendedScript;
-	GIsRunningUnattendedScript = true;
+	TGuardValue<bool> UnattendedGuard(GIsRunningUnattendedScript, true);
 
 	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
 	AssetToolsModule.Get().ImportAssetTasks({ ImportTask });
-
-	GIsRunningUnattendedScript = bWasUnattended;
-	bIsHandlingProxyCygonReimport = false;
 	
 	if (ImportTask->GetObjects().Num() > 0)
 	{

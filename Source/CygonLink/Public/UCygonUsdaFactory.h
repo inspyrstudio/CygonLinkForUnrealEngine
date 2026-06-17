@@ -44,17 +44,17 @@ public:
 	/// @return The priority value for this factory (DefaultImportPriority + 1)
 	virtual int32 GetPriority() const override { return DefaultImportPriority + 1; }
 
-private:
 	/// Check if the file contains the "Cygon" tag in its first line to identify it as a file meant to be imported via our custom Factory
 	/// @param Filename The file path to check
 	/// @return true if the file contains the "Cygon" tag in its first line, false otherwise
-	bool IsCygonFile(const FString& Filename);
-	
-	/// Check if the file is a basic mesh imported via USD (and not a full scene)
+	static bool IsCygonFile(const FString& Filename);
+
+	/// Check if the file is a referenced sub-mesh (lives in a `meshes/` folder) rather than a full scene
 	/// @param Filename The file path to check
-	/// @return true if the file is a simple mesh, false otherwise
-	bool IsSimpleMesh(const FString& Filename);
-	
+	/// @return true if the file is a sub-mesh, false otherwise
+	static bool IsSimpleMesh(const FString& Filename);
+
+private:
 	/// Retrieve the source filename from the AssetImportData of the given object, if it exists
 	/// @param Obj The object to retrieve the source filename from
 	/// @return The source filename if it exists, an empty string otherwise
