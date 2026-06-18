@@ -65,4 +65,10 @@ private:
 	/// @param DestinationPath The destination path in the content browser
 	/// @return The newly created and configured asset import task
 	UAssetImportTask* CreateImportTask(const FString& Filename, const FString& DestinationPath);
+	
+	/// Set every imported static mesh to use its render geometry as simple collision
+	/// (CTF_UseComplexAsSimple) and resave it. The native USD importer cooks complex collision
+	/// but no simple collision, so gameplay queries would otherwise pass straight through the mesh.
+	/// @param ImportedObjects The objects produced by the import task; non static-mesh objects are ignored
+	void ApplyComplexAsSimpleCollision(const TArray<UObject*>& ImportedObjects) const;
 };

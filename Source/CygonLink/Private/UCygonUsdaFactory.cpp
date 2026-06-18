@@ -6,6 +6,11 @@
 #include "IAssetTools.h"
 #include "AssetToolsModule.h"
 #include "EditorFramework/AssetImportData.h" 
+#include "PhysicsEngine/BodySetup.h"
+#include "Components/StaticMeshComponent.h"
+#include "EditorSupportDelegates.h"
+#include "UObject/UObjectIterator.h"
+#include "FileHelpers.h"
 
 UCygonUsdaFactory::UCygonUsdaFactory()
 {
@@ -50,6 +55,7 @@ UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent
 	AssetToolsModule.Get().ImportAssetTasks({ ImportTask });
 	
 	const TArray<UObject*> ImportedObjects = ImportTask->GetObjects();
+	ApplyComplexAsSimpleCollision(ImportedObjects);
 	if (ImportedObjects.Num() > 0)
 	{
 		return ImportedObjects[0];
@@ -129,6 +135,7 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	
 	if (ImportTask->GetObjects().Num() > 0)
 	{
+		ApplyComplexAsSimpleCollision(ImportTask->GetObjects());
 		UE_LOG(LogTemp, Log, TEXT("Asset reimported successfully: %s"), *Obj->GetName());
 		return EReimportResult::Succeeded;
 	}
@@ -217,4 +224,41 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 		ImportTask->Options = ImportOptions;
 	}
 	return ImportTask;
+}
+
+void UCygonUsdaFactory::ApplyComplexAsSimpleCollision(const TArray<UObject*>& ImportedObjects) const
+{
+	TArray<UPackage*> PackagesToSave;
+	TSet<UStaticMesh*> ChangedMeshes;
+
+	for (UObject* Obj : ImportedObjects)
+	{
+		UStaticMesh* StaticMesh = Cast<UStaticMesh>(Obj);
+		if (!StaticMesh) continue;
+		
+		UBodySetup* BodySetup = StaticMesh->GetBodySetup();
+		if (!BodySetup)
+		{
+			StaticMesh->CreateBodySetup();
+			BodySetup = StaticMesh->GetBodySetup();
+		}
+		if (!BodySetup) continue;
+		
+		if (BodySetup->CollisionTraceFlag == CTF_UseComplexAsSimple) continue;
+		
+		StaticMesh->Modify();
+		BodySetup->Modify();
+		BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
+		StaticMesh->MarkPackageDirty();
+		
+		ChangedMeshes.Add(StaticMesh);
+		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
+		
+		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Applied complex-as-simple collision to: %s"), *StaticMesh->GetName());
+	}
+	
+	if (PackagesToSave.Num() > 0)
+	{
+		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, /*bOnlyDirty*/ true);
+	}
 }
