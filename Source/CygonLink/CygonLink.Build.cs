@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright Inspyr Studio, SAS. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -34,6 +34,8 @@ public class CygonLink : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"AssetTools",
+				"DirectoryWatcher",
 			}
 		);
 		

@@ -6,6 +6,11 @@
 #include "IAssetTools.h"
 #include "AssetToolsModule.h"
 #include "EditorFramework/AssetImportData.h" 
+#include "PhysicsEngine/BodySetup.h"
+#include "Components/StaticMeshComponent.h"
+#include "EditorSupportDelegates.h"
+#include "UObject/UObjectIterator.h"
+#include "FileHelpers.h"
 
 UCygonUsdaFactory::UCygonUsdaFactory()
 {
@@ -28,9 +33,9 @@ bool UCygonUsdaFactory::FactoryCanImport(const FString& Filename)
 
 UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, const FString& Filename, const TCHAR* Parms, FFeedbackContext* Warn, bool& bOutCanceled)
 {    
-    if (IsSimpleMesh(CurrentFilename))
+    if (IsSimpleMesh(Filename))
     {
-        UE_LOG(LogTemp, Warning, TEXT("Sub mesh ignored : %s"), *CurrentFilename);
+        UE_LOG(LogTemp, Warning, TEXT("Sub mesh ignored : %s"), *Filename);
     	bOutCanceled = true; 
         
     	return nullptr; 
@@ -44,12 +49,13 @@ UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent
 		DestPath = FPaths::GetPath(DestPath);
 	}
 
-	UAssetImportTask* ImportTask = CreateImportTask(CurrentFilename, DestPath);
+	UAssetImportTask* ImportTask = CreateImportTask(Filename, DestPath);
 	
 	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
 	AssetToolsModule.Get().ImportAssetTasks({ ImportTask });
 	
 	const TArray<UObject*> ImportedObjects = ImportTask->GetObjects();
+	ApplyComplexAsSimpleCollision(ImportedObjects);
 	if (ImportedObjects.Num() > 0)
 	{
 		return ImportedObjects[0];
@@ -64,14 +70,18 @@ bool UCygonUsdaFactory::CanReimport(UObject* Obj, TArray<FString>& OutFilenames)
     
 	if (SourceFilename.IsEmpty() || !SourceFilename.EndsWith(TEXT(".usda"))) return false;
 	
-	if (IsCygonFile(SourceFilename)) return true;
+	if (IsCygonFile(SourceFilename))
+	{
+		OutFilenames.Add(SourceFilename);
+		return true;
+	}
 	
 	return false;
 }
 
 void UCygonUsdaFactory::SetReimportPaths(UObject* Obj, const TArray<FString>& NewReimportPaths)
 {
-	if (!Obj) return;
+	if (!Obj || NewReimportPaths.Num() == 0) return;
 	
 	FObjectProperty* Prop = FindFProperty<FObjectProperty>(Obj->GetClass(), "AssetImportData");
 	UStaticMesh* SM = Cast<UStaticMesh>(Obj);
@@ -98,7 +108,7 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	if (SourceFilename.IsEmpty()) return EReimportResult::Failed;
 	if (IsSimpleMesh(SourceFilename)) return EReimportResult::Cancelled;
 	
-	bIsHandlingProxyCygonReimport = true;
+	TGuardValue<bool> ReentryGuard(bIsHandlingProxyCygonReimport, true);
 	UE_LOG(LogTemp, Warning, TEXT("Asset update triggered on: %s"), *Obj->GetName());
 	
 	FString UsdBaseName = FPaths::GetBaseFilename(SourceFilename); 
@@ -118,17 +128,14 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	}
 	UAssetImportTask* ImportTask = CreateImportTask(SourceFilename, DestPath);
 	
-	bool bWasUnattended = GIsRunningUnattendedScript;
-	GIsRunningUnattendedScript = true;
+	TGuardValue<bool> UnattendedGuard(GIsRunningUnattendedScript, true);
 
 	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
 	AssetToolsModule.Get().ImportAssetTasks({ ImportTask });
-
-	GIsRunningUnattendedScript = bWasUnattended;
-	bIsHandlingProxyCygonReimport = false;
 	
 	if (ImportTask->GetObjects().Num() > 0)
 	{
+		ApplyComplexAsSimpleCollision(ImportTask->GetObjects());
 		UE_LOG(LogTemp, Log, TEXT("Asset reimported successfully: %s"), *Obj->GetName());
 		return EReimportResult::Succeeded;
 	}
@@ -217,4 +224,41 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 		ImportTask->Options = ImportOptions;
 	}
 	return ImportTask;
+}
+
+void UCygonUsdaFactory::ApplyComplexAsSimpleCollision(const TArray<UObject*>& ImportedObjects) const
+{
+	TArray<UPackage*> PackagesToSave;
+	TSet<UStaticMesh*> ChangedMeshes;
+
+	for (UObject* Obj : ImportedObjects)
+	{
+		UStaticMesh* StaticMesh = Cast<UStaticMesh>(Obj);
+		if (!StaticMesh) continue;
+		
+		UBodySetup* BodySetup = StaticMesh->GetBodySetup();
+		if (!BodySetup)
+		{
+			StaticMesh->CreateBodySetup();
+			BodySetup = StaticMesh->GetBodySetup();
+		}
+		if (!BodySetup) continue;
+		
+		if (BodySetup->CollisionTraceFlag == CTF_UseComplexAsSimple) continue;
+		
+		StaticMesh->Modify();
+		BodySetup->Modify();
+		BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
+		StaticMesh->MarkPackageDirty();
+		
+		ChangedMeshes.Add(StaticMesh);
+		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
+		
+		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Applied complex-as-simple collision to: %s"), *StaticMesh->GetName());
+	}
+	
+	if (PackagesToSave.Num() > 0)
+	{
+		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, /*bOnlyDirty*/ true);
+	}
 }

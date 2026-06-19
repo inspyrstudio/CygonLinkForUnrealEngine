@@ -1,6 +1,6 @@
 # Cygon Link for Unreal Engine
 Seamless integration and live-sync for USDA files.
-
+[Requirements.md](Docs/Requirements.md)
 Cygon Link is a powerful bridge that provides a robust pipeline for bringing USDA (Universal Scene Description) assets into Unreal Engine. It features a custom Factory for automated conversion. It also syncs changes from Cygon to Unreal Engine in real-time.
 
 ## Key Features
@@ -12,12 +12,14 @@ Cygon Link is a powerful bridge that provides a robust pipeline for bringing USD
 
 Full documentation is available in the [`Docs/`](Docs/) folder:
 
-| Guide                                | Description                                                |
-|--------------------------------------|------------------------------------------------------------|
-| [Requirements](Docs/Requirements.md) | Software requirements and enabling the USD Importer plugin |
-| [Installation](Docs/Installation.md) | Installing via Fab or from source                          |
-| [FirstImport](Docs/FirstImport.md)   | Step-by-step guide for your Cygon scene import        |
-| [Live Sync](Docs/LiveSync.md)        | Setting up real-time sync between Cygon and UE             |
+| Guide                                      | Description                                                |
+|--------------------------------------------|------------------------------------------------------------|
+| [Getting Started](Docs/GettingStarted.md)  | Overview and the recommended setup order                   |
+| [What is Cygon?](Docs/WhatIsCygon.md)      | Quick overview of the Cygon tool itself                    |
+| [Requirements](Docs/Requirements.md)       | Software requirements and enabling the USD Importer plugin |
+| [Installation](Docs/Installation.md)       | Installing via Fab or from source                          |
+| [First Import](Docs/FirstImport.md)        | Step-by-step guide for your first Cygon scene import       |
+| [Live Sync](Docs/LiveSync.md)              | Setting up real-time sync between Cygon and UE             |
 
 A sample `.usda` file is included at [Docs/Samples](Docs/Samples) to verify the plugin works without needing Cygon installed.
 
@@ -45,10 +47,10 @@ If you prefer to compile the plugin yourself or need the latest development vers
 - Open your project in Unreal Engine and click Yes when prompted to rebuild the missing modules, or build it directly from your IDE.
 
 ## How to use it?
-- Import your Assets: In Cygon export your level in the `Content` folder of your Unreal project. This will ensure that the plugin can find the files and reimport them correctly. To export you can use CTRL + S or the export button in the UI.
-- Add to Level: Drag the imported asset from the Content Browser into your Level Viewport or Outliner.
-- Live Editing Workflow: Keep your Unreal Engine Scene open. Open the source file in Cygon. Modify geometry or transforms and Export or Quick Export with CTRL + S.
-- Switch back to Unreal Engine: the auto-reimport process will trigger, and your meshes will update instantly.
+- **Import your assets**: In Cygon, export your level into the `Content/` folder of your Unreal project (CTRL + S or the export button). As long as the editor is open, Cygon Link detects the new files and imports them automatically — no pop-up, and no editor preferences to enable.
+- **Add to Level**: Drag the imported asset from the Content Browser into your Level Viewport or Outliner.
+- **Live Editing Workflow**: Keep your Unreal Engine project open. Open the source file in Cygon, modify geometry or transforms, and Export / Quick Export with CTRL + S.
+- **Switch back to Unreal Engine**: Cygon Link detects the change and reimports automatically — your meshes update without any manual step.
 
 ## Dependencies
 This plugin has no third-party code or libraries. The only dependency is
@@ -57,7 +59,7 @@ This plugin has no third-party code or libraries. The only dependency is
 
 ## Miscellaneous
 - Requirements
-Unreal Engine Version: 5.7 or higher (Tested on recent UE5.7 versions). Ensure the USD Importer plugin is enabled in your Unreal project.
+Unreal Engine Version: 5.8 or higher (Tested on recent UE5.7 versions). Ensure the USD Importer plugin is enabled in your Unreal project.
 Cygon Version: 0.2.3i or higher. (Note: versions prior to 0.2.3i do not support the proper export pipeline needed for engine integration).
 
 - Contributing

@@ -44,17 +44,17 @@ public:
 	/// @return The priority value for this factory (DefaultImportPriority + 1)
 	virtual int32 GetPriority() const override { return DefaultImportPriority + 1; }
 
-private:
 	/// Check if the file contains the "Cygon" tag in its first line to identify it as a file meant to be imported via our custom Factory
 	/// @param Filename The file path to check
 	/// @return true if the file contains the "Cygon" tag in its first line, false otherwise
-	bool IsCygonFile(const FString& Filename);
-	
-	/// Check if the file is a basic mesh imported via USD (and not a full scene)
+	static bool IsCygonFile(const FString& Filename);
+
+	/// Check if the file is a referenced sub-mesh (lives in a `meshes/` folder) rather than a full scene
 	/// @param Filename The file path to check
-	/// @return true if the file is a simple mesh, false otherwise
-	bool IsSimpleMesh(const FString& Filename);
-	
+	/// @return true if the file is a sub-mesh, false otherwise
+	static bool IsSimpleMesh(const FString& Filename);
+
+private:
 	/// Retrieve the source filename from the AssetImportData of the given object, if it exists
 	/// @param Obj The object to retrieve the source filename from
 	/// @return The source filename if it exists, an empty string otherwise
@@ -65,4 +65,10 @@ private:
 	/// @param DestinationPath The destination path in the content browser
 	/// @return The newly created and configured asset import task
 	UAssetImportTask* CreateImportTask(const FString& Filename, const FString& DestinationPath);
+	
+	/// Set every imported static mesh to use its render geometry as simple collision
+	/// (CTF_UseComplexAsSimple) and resave it. The native USD importer cooks complex collision
+	/// but no simple collision, so gameplay queries would otherwise pass straight through the mesh.
+	/// @param ImportedObjects The objects produced by the import task; non static-mesh objects are ignored
+	void ApplyComplexAsSimpleCollision(const TArray<UObject*>& ImportedObjects) const;
 };

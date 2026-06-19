@@ -32,7 +32,7 @@ Follow these in order for your first setup:
 - Drag the asset into your level.
 - Make changes in Cygon, export again — UE updates instantly.
 
-For a deeper explanation of the pipeline, see [How It Works](HowItWorks.md).
+For a deeper explanation of the pipeline, see [What is Cygon?](WhatIsCygon.md).
 
 ## Dependencies
 This plugin has no third-party code or libraries. The only dependency is the **USD Importer** plugin, which is an Epic Games built-in plugin shipped with Unreal Engine itself.
