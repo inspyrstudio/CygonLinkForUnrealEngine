@@ -1,6 +1,6 @@
 # Cygon Link for Unreal Engine
 Seamless integration and live-sync for USDA files.
-
+[Requirements.md](Docs/Requirements.md)
 Cygon Link is a powerful bridge that provides a robust pipeline for bringing USDA (Universal Scene Description) assets into Unreal Engine. It features a custom Factory for automated conversion. It also syncs changes from Cygon to Unreal Engine in real-time.
 
 ## Key Features
@@ -59,7 +59,7 @@ This plugin has no third-party code or libraries. The only dependency is
 
 ## Miscellaneous
 - Requirements
-Unreal Engine Version: 5.7 or higher (Tested on recent UE5.7 versions). Ensure the USD Importer plugin is enabled in your Unreal project.
+Unreal Engine Version: 5.8 or higher (Tested on recent UE5.7 versions). Ensure the USD Importer plugin is enabled in your Unreal project.
 Cygon Version: 0.2.3i or higher. (Note: versions prior to 0.2.3i do not support the proper export pipeline needed for engine integration).
 
 - Contributing
