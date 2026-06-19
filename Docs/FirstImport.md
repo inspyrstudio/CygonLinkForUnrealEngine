@@ -7,22 +7,21 @@ This guide walks you through importing a scene made in Cygon into Unreal Engine 
 - Cygon will generate a `.usda` file along with a `meshes/` subfolder containing individual mesh files at the location you specified.
 ![Cygon_ExportSection](Screenshots/Cygon_ExportSection.png)
 
-**Example output structure inside your UE Content folder were MyScene is the name of your scene in Cygon:**
+**Example output structure inside your UE Content folder where MyScene is the name of your scene in Cygon:**
 ```
 Content/
+├── MyScene.usda
+├── meshes/
+│      ├── Wall.usda
+│      ├── Stairs.usda
+│      └── Floor.usda
 └── MyScene
-    ├── MyScene.usda
-    ├── meshes/
-    │      ├── Wall.usda
-    │      ├── Stairs.usda
-    │      └── Floor.usda
-    └── MyScene
-        ├── Materials/
-        │      ├── Wall_Mat.uasset
-        │      ├── Stairs_Mat.uasset
-        │      └── Floor_Mat.uasset
-        └── StaticMeshes/
-            └── SM_World.uasset
+    ├── Materials/
+    │      ├── Wall_Mat.uasset
+    │      ├── Stairs_Mat.uasset
+    │      └── Floor_Mat.uasset
+    └── StaticMeshes/
+        └── SM_World.uasset
 ```
 
 > Exporting directly into the `Content/` folder is required. The plugin resolves asset paths relative to this location.
@@ -34,9 +33,9 @@ Cygon Link will intercept the file, process it through the USD pipeline, and gen
 > **Important limitation:** This method does **not** support hot reload (or Live Sync). If you later modify the scene in Cygon and re-export, Unreal Engine will not automatically detect and reimport the changes. For live sync to work, the file must be exported directly into the `Content/` folder as described in Step 1.
 
 ## Step 2 — Import into Unreal Engine
-- Switch to Unreal Engine. The Content Browser should detect the new files automatically. You may have to approve the import process in the Editor with with a pop-up.
-- Cygon Link will intercept the import and process it through the USD pipeline.
-- Native UE assets (Static Meshes, Materials, etc.) will be generated automatically in the same folder.
+- Switch to Unreal Engine. Cygon Link detects the new files and imports them automatically — no pop-up and no manual approval.
+- It intercepts the import and processes it through the USD pipeline.
+- Native UE assets (Static Meshes, Materials, etc.) are generated automatically in the same folder, each with collision set up.
 
 ## Step 3 — Add to Level
 Drag the imported asset from the Content Browser into your **Level Viewport** or **Outliner**, and now you can use what you've just created in Cygon.
@@ -49,5 +48,5 @@ You can drag it directly into the Content Browser to verify that (following the 
 - The USD Importer processes it and generates assets.
 - No errors appear in the Output Log.
 
-It should look like this in you viewport after importing and dragging it into the level:
+It should look like this in your viewport after importing and dragging it into the level:
 ![UE_SampleImport](Screenshots/UE_SampleImport.png)

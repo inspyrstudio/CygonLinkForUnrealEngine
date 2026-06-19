@@ -1,6 +1,6 @@
 # What is Cygon?
 
-Cygon is a **standalone 3D environment prototyping tool** developed by us [Inspyr Studio](https://inspyrstudio.com/). It is designed to help artists and designers iterate rapidly on 3D environment layouts, a dedicated blockout tool that keeps the creative process fast, without less overhead.
+Cygon is a **standalone 3D environment prototyping tool** developed by us [Inspyr Studio](https://inspyrstudio.com/). It is designed to help artists and designers iterate rapidly on 3D environment layouts, a dedicated blockout tool that keeps the creative process fast, with less overhead.
 ![Cygon interface](Screenshots/Cygon_SampleView.png)
 
 Cygon Link is the bridge that brings your Cygon blockouts directly into Unreal Engine, keeping both in sync as you iterate.

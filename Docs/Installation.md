@@ -26,5 +26,5 @@ git clone https://github.com/inspyrstudio/CygonLinkForUnrealEngine
 After installation and editor restart:
 - Go to **Edit → Plugins** and confirm **Cygon Link** appears and is enabled.
 - Confirm **USD Importer** is also enabled (see [Requirements](Requirements.md)).
-- Drag the included [CygonSample.usda](Samples/CygonSample.usda) file into your **Content Browser** to verify the plugin intercepts and imports it correctly.
+- Drag the included [sample scene](Samples/SampleScene/RestlessPeak.usda) into your **Content Browser** to verify the plugin intercepts and imports it correctly.
 > **Note:** For more information on importing your own scenes from Cygon, refer to the [First Import Guide](FirstImport.md).

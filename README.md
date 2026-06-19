@@ -12,12 +12,14 @@ Cygon Link is a powerful bridge that provides a robust pipeline for bringing USD
 
 Full documentation is available in the [`Docs/`](Docs/) folder:
 
-| Guide                                | Description                                                |
-|--------------------------------------|------------------------------------------------------------|
-| [Requirements](Docs/Requirements.md) | Software requirements and enabling the USD Importer plugin |
-| [Installation](Docs/Installation.md) | Installing via Fab or from source                          |
-| [FirstImport](Docs/FirstImport.md)   | Step-by-step guide for your Cygon scene import        |
-| [Live Sync](Docs/LiveSync.md)        | Setting up real-time sync between Cygon and UE             |
+| Guide                                      | Description                                                |
+|--------------------------------------------|------------------------------------------------------------|
+| [Getting Started](Docs/GettingStarted.md)  | Overview and the recommended setup order                   |
+| [What is Cygon?](Docs/WhatIsCygon.md)      | Quick overview of the Cygon tool itself                    |
+| [Requirements](Docs/Requirements.md)       | Software requirements and enabling the USD Importer plugin |
+| [Installation](Docs/Installation.md)       | Installing via Fab or from source                          |
+| [First Import](Docs/FirstImport.md)        | Step-by-step guide for your first Cygon scene import       |
+| [Live Sync](Docs/LiveSync.md)              | Setting up real-time sync between Cygon and UE             |
 
 A sample `.usda` file is included at [Docs/Samples](Docs/Samples) to verify the plugin works without needing Cygon installed.
 
