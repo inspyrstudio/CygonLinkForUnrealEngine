@@ -11,7 +11,7 @@ Make sure you have the following ready:
 
 | Software      | Minimum Version |
 |---------------|-----------------|
-| Unreal Engine | 5.7+            |
+| Unreal Engine | 5.8+            |
 | Cygon         | 0.2.3i+         |
 
 > New to Cygon? See [What is Cygon?](WhatIsCygon.md) and watch the [installation tutorial on YouTube](https://www.youtube.com/watch?v=SaS8J_4AumM).

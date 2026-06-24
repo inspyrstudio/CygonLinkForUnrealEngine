@@ -11,6 +11,9 @@
 #include "EditorSupportDelegates.h"
 #include "UObject/UObjectIterator.h"
 #include "FileHelpers.h"
+#include "Editor.h"
+#include "TimerManager.h"
+#include "Engine/CollisionProfile.h"
 
 UCygonUsdaFactory::UCygonUsdaFactory()
 {
@@ -221,19 +224,23 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 	{
 		UObject* ImportOptions = NewObject<UObject>(GetTransientPackage(), UsdOptionsClass);
 		
+		if (FBoolProperty* ImportActorsProp = FindFProperty<FBoolProperty>(UsdOptionsClass, TEXT("bImportActors")))
+		{
+			ImportActorsProp->SetPropertyValue_InContainer(ImportOptions, false);
+		}
+		
 		ImportTask->Options = ImportOptions;
 	}
 	return ImportTask;
 }
 
-void UCygonUsdaFactory::ApplyComplexAsSimpleCollision(const TArray<UObject*>& ImportedObjects) const
+void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPtr<UStaticMesh>>& Meshes)
 {
 	TArray<UPackage*> PackagesToSave;
-	TSet<UStaticMesh*> ChangedMeshes;
-
-	for (UObject* Obj : ImportedObjects)
+	
+	for (const TWeakObjectPtr<UStaticMesh>& WeakMesh : Meshes)
 	{
-		UStaticMesh* StaticMesh = Cast<UStaticMesh>(Obj);
+		UStaticMesh* StaticMesh = WeakMesh.Get();
 		if (!StaticMesh) continue;
 		
 		UBodySetup* BodySetup = StaticMesh->GetBodySetup();
@@ -244,21 +251,45 @@ void UCygonUsdaFactory::ApplyComplexAsSimpleCollision(const TArray<UObject*>& Im
 		}
 		if (!BodySetup) continue;
 		
-		if (BodySetup->CollisionTraceFlag == CTF_UseComplexAsSimple) continue;
-		
 		StaticMesh->Modify();
 		BodySetup->Modify();
+		BodySetup->RemoveSimpleCollision();
+		BodySetup->bNeverNeedsCookedCollisionData = false;
+		BodySetup->DefaultInstance.SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
 		BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
+		BodySetup->InvalidatePhysicsData();
+		BodySetup->CreatePhysicsMeshes();
+		
+		StaticMesh->CreateNavCollision(/*bIsUpdate*/ true);
 		StaticMesh->MarkPackageDirty();
 		
-		ChangedMeshes.Add(StaticMesh);
 		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
 		
-		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Applied complex-as-simple collision to: %s"), *StaticMesh->GetName());
+		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Enabled complex-as-simple collision on: %s"), *StaticMesh->GetName());
 	}
 	
 	if (PackagesToSave.Num() > 0)
 	{
 		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, /*bOnlyDirty*/ true);
 	}
+}
+
+void UCygonUsdaFactory::ApplyComplexAsSimpleCollision(const TArray<UObject*>& ImportedObjects) const
+{
+	TArray<TWeakObjectPtr<UStaticMesh>> meshes;
+	for (UObject* Obj : ImportedObjects)
+	{
+		if (UStaticMesh* StaticMesh = Cast<UStaticMesh>(Obj))
+		{
+			meshes.Add(StaticMesh);
+		}
+	}
+	
+	if (meshes.Num() == 0 || !GEditor) return;
+	
+	GEditor->GetTimerManager()->SetTimerForNextTick([meshes]()
+	{
+		FinalizeImportedMeshCollision(meshes);
+	});
 }
