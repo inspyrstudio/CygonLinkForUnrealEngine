@@ -54,6 +54,10 @@ public:
 	/// @return true if the file is a sub-mesh, false otherwise
 	static bool IsSimpleMesh(const FString& Filename);
 
+	/// @return true while a Play-In-Editor session is running. Imports triggered during play must not
+	/// write to disk; the save is deferred until PIE ends (see FinalizeImportedMeshCollision).
+	static bool IsPlayInEditorActive();
+
 private:
 	/// Retrieve the source filename from the AssetImportData of the given object, if it exists
 	/// @param Obj The object to retrieve the source filename from

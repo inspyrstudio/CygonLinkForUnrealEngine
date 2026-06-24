@@ -211,14 +211,14 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 	ImportTask->DestinationPath = DestinationPath; 
 	ImportTask->bAutomated = true;
 	ImportTask->bReplaceExisting = true;
-	ImportTask->bSave = true;
-	
+	ImportTask->bSave = !IsPlayInEditorActive();
+
 	UClass* UsdFactoryClass = LoadObject<UClass>(nullptr, TEXT("/Script/USDStageImporter.UsdStageAssetImportFactory"));
 	if (UsdFactoryClass)
 	{
 		ImportTask->Factory = NewObject<UFactory>(GetTransientPackage(), UsdFactoryClass);
 	}
-
+	
 	UClass* UsdOptionsClass = LoadObject<UClass>(nullptr, TEXT("/Script/USDStageImporter.UsdStageImportOptions"));
 	if (UsdOptionsClass)
 	{
@@ -232,6 +232,40 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 		ImportTask->Options = ImportOptions;
 	}
 	return ImportTask;
+}
+
+bool UCygonUsdaFactory::IsPlayInEditorActive()
+{
+	return GEditor && GEditor->PlayWorld != nullptr;
+}
+
+// Packages dirtied by a collision pass that ran during Play-In-Editor. We never write to disk while
+// playing; these are flushed once PIE ends so the hot-reloaded collision persists.
+static TSet<TWeakObjectPtr<UPackage>> GCygonPiePendingSaves;
+static FDelegateHandle GCygonEndPieSaveHandle;
+
+static void SaveCygonPackagesAfterPie(const bool)
+{
+	if (GCygonEndPieSaveHandle.IsValid())
+	{
+		FEditorDelegates::EndPIE.Remove(GCygonEndPieSaveHandle);
+		GCygonEndPieSaveHandle.Reset();
+	}
+	
+	TArray<UPackage*> Packages;
+	for (const TWeakObjectPtr<UPackage>& WeakPackage : GCygonPiePendingSaves)
+	{
+		if (UPackage* Package = WeakPackage.Get())
+		{
+			Packages.Add(Package);
+		}
+	}
+	GCygonPiePendingSaves.Empty();
+	
+	if (Packages.Num() > 0)
+	{
+		UEditorLoadingAndSavingUtils::SavePackages(Packages, true);
+	}
 }
 
 void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPtr<UStaticMesh>>& Meshes)
@@ -261,17 +295,38 @@ void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPt
 		BodySetup->InvalidatePhysicsData();
 		BodySetup->CreatePhysicsMeshes();
 		
-		StaticMesh->CreateNavCollision(/*bIsUpdate*/ true);
+		StaticMesh->CreateNavCollision(true);
 		StaticMesh->MarkPackageDirty();
+		
+		for (TObjectIterator<UStaticMeshComponent> CompIt; CompIt; ++CompIt)
+		{
+			if (CompIt->GetStaticMesh() == StaticMesh)
+			{
+				CompIt->RecreatePhysicsState();
+			}
+		}
 		
 		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
 		
 		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Enabled complex-as-simple collision on: %s"), *StaticMesh->GetName());
 	}
 	
-	if (PackagesToSave.Num() > 0)
+	if (PackagesToSave.Num() == 0) return;
+	
+	if (IsPlayInEditorActive())
 	{
-		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, /*bOnlyDirty*/ true);
+		for (UPackage* Package : PackagesToSave)
+		{
+			GCygonPiePendingSaves.Add(Package);
+		}
+		if (!GCygonEndPieSaveHandle.IsValid())
+		{
+			GCygonEndPieSaveHandle = FEditorDelegates::EndPIE.AddStatic(&SaveCygonPackagesAfterPie);
+		}
+	}
+	else
+	{
+		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, true);
 	}
 }
 
