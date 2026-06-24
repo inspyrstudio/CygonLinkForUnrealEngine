@@ -71,4 +71,9 @@ private:
 	/// but no simple collision, so gameplay queries would otherwise pass straight through the mesh.
 	/// @param ImportedObjects The objects produced by the import task; non static-mesh objects are ignored
 	void ApplyComplexAsSimpleCollision(const TArray<UObject*>& ImportedObjects) const;
+
+	/// Apply complex-as-simple collision to the given meshes and resave them. Scheduled by
+	/// ApplyComplexAsSimpleCollision to run on the next editor tick.
+	/// @param Meshes References to the imported static meshes.
+	static void FinalizeImportedMeshCollision(const TArray<TWeakObjectPtr<UStaticMesh>>& Meshes);
 };

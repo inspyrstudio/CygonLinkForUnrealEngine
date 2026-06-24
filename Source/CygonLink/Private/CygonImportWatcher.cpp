@@ -94,13 +94,11 @@ bool FCygonImportWatcher::Tick(float DeltaTime)
 	
 	if (FPlatformTime::Seconds() - LastChangeTimeSeconds < ImportDebounceSeconds) return true;
 	
-	TArray<FString> ReadyScenes = PendingScenes.Array();
-	PendingScenes.Empty();
+	auto It = PendingScenes.CreateIterator();
+	const FString Scene = *It;
+	It.RemoveCurrent();
 	
-	for (const FString& Scene : ReadyScenes)
-	{
-		TriggerImport(Scene);
-	}
+	TriggerImport(Scene);
 	
 	return true;
 }
