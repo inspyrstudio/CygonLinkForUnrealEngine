@@ -12,11 +12,6 @@
 #include "Misc/PackageName.h"
 #include "HAL/PlatformTime.h"
 
-namespace
-{
-	const TCHAR* const DirectoryWatcherModuleName = TEXT("DirectoryWatcher");
-}
-
 FCygonImportWatcher::~FCygonImportWatcher()
 {
 	Stop();

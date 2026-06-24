@@ -101,7 +101,7 @@ void UCygonUsdaFactory::SetReimportPaths(UObject* Obj, const TArray<FString>& Ne
 	}
 }
 
-static bool bIsHandlingProxyCygonReimport = false; // To avoid potential loops when reimporting an asset
+bool UCygonUsdaFactory::bIsHandlingProxyCygonReimport = false;
 
 EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 {
@@ -239,29 +239,27 @@ bool UCygonUsdaFactory::IsPlayInEditorActive()
 	return GEditor && GEditor->PlayWorld != nullptr;
 }
 
-// Packages dirtied by a collision pass that ran during Play-In-Editor. We never write to disk while
-// playing; these are flushed once PIE ends so the hot-reloaded collision persists.
-static TSet<TWeakObjectPtr<UPackage>> GCygonPiePendingSaves;
-static FDelegateHandle GCygonEndPieSaveHandle;
+TSet<TWeakObjectPtr<UPackage>> UCygonUsdaFactory::PiePendingSavePackages;
+FDelegateHandle UCygonUsdaFactory::PieEndSaveHandle;
 
-static void SaveCygonPackagesAfterPie(const bool)
+void UCygonUsdaFactory::SavePiePendingPackages(bool /*bIsSimulating*/)
 {
-	if (GCygonEndPieSaveHandle.IsValid())
+	if (PieEndSaveHandle.IsValid())
 	{
-		FEditorDelegates::EndPIE.Remove(GCygonEndPieSaveHandle);
-		GCygonEndPieSaveHandle.Reset();
+		FEditorDelegates::EndPIE.Remove(PieEndSaveHandle);
+		PieEndSaveHandle.Reset();
 	}
 	
 	TArray<UPackage*> Packages;
-	for (const TWeakObjectPtr<UPackage>& WeakPackage : GCygonPiePendingSaves)
+	for (const TWeakObjectPtr<UPackage>& WeakPackage : PiePendingSavePackages)
 	{
 		if (UPackage* Package = WeakPackage.Get())
 		{
 			Packages.Add(Package);
 		}
 	}
-	GCygonPiePendingSaves.Empty();
-	
+	PiePendingSavePackages.Empty();
+
 	if (Packages.Num() > 0)
 	{
 		UEditorLoadingAndSavingUtils::SavePackages(Packages, true);
@@ -317,11 +315,11 @@ void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPt
 	{
 		for (UPackage* Package : PackagesToSave)
 		{
-			GCygonPiePendingSaves.Add(Package);
+			PiePendingSavePackages.Add(Package);
 		}
-		if (!GCygonEndPieSaveHandle.IsValid())
+		if (!PieEndSaveHandle.IsValid())
 		{
-			GCygonEndPieSaveHandle = FEditorDelegates::EndPIE.AddStatic(&SaveCygonPackagesAfterPie);
+			PieEndSaveHandle = FEditorDelegates::EndPIE.AddStatic(&UCygonUsdaFactory::SavePiePendingPackages);
 		}
 	}
 	else

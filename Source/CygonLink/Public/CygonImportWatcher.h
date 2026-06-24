@@ -42,4 +42,7 @@ private:
 
 	double LastChangeTimeSeconds = 0.0;
 	static constexpr double ImportDebounceSeconds = 2.0;
+
+	/// Name of the engine DirectoryWatcher module this watcher binds to.
+	static constexpr const TCHAR* DirectoryWatcherModuleName = TEXT("DirectoryWatcher");
 };
