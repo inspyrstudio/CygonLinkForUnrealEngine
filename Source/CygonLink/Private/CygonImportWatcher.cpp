@@ -12,11 +12,6 @@
 #include "Misc/PackageName.h"
 #include "HAL/PlatformTime.h"
 
-namespace
-{
-	const TCHAR* const DirectoryWatcherModuleName = TEXT("DirectoryWatcher");
-}
-
 FCygonImportWatcher::~FCygonImportWatcher()
 {
 	Stop();
@@ -122,7 +117,7 @@ void FCygonImportWatcher::TriggerImport(const FString& AbsoluteFilename)
 	ImportTask->DestinationPath = DestinationPath;
 	ImportTask->bAutomated = true;
 	ImportTask->bReplaceExisting = true;
-	ImportTask->bSave = true;
+	ImportTask->bSave = !UCygonUsdaFactory::IsPlayInEditorActive();
 	ImportTask->Factory = NewObject<UCygonUsdaFactory>();
 	
 	TGuardValue<bool> UnattendedGuard(GIsRunningUnattendedScript, true);

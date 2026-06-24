@@ -101,7 +101,7 @@ void UCygonUsdaFactory::SetReimportPaths(UObject* Obj, const TArray<FString>& Ne
 	}
 }
 
-static bool bIsHandlingProxyCygonReimport = false; // To avoid potential loops when reimporting an asset
+bool UCygonUsdaFactory::bIsHandlingProxyCygonReimport = false;
 
 EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 {
@@ -211,14 +211,14 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 	ImportTask->DestinationPath = DestinationPath; 
 	ImportTask->bAutomated = true;
 	ImportTask->bReplaceExisting = true;
-	ImportTask->bSave = true;
-	
+	ImportTask->bSave = !IsPlayInEditorActive();
+
 	UClass* UsdFactoryClass = LoadObject<UClass>(nullptr, TEXT("/Script/USDStageImporter.UsdStageAssetImportFactory"));
 	if (UsdFactoryClass)
 	{
 		ImportTask->Factory = NewObject<UFactory>(GetTransientPackage(), UsdFactoryClass);
 	}
-
+	
 	UClass* UsdOptionsClass = LoadObject<UClass>(nullptr, TEXT("/Script/USDStageImporter.UsdStageImportOptions"));
 	if (UsdOptionsClass)
 	{
@@ -232,6 +232,38 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 		ImportTask->Options = ImportOptions;
 	}
 	return ImportTask;
+}
+
+bool UCygonUsdaFactory::IsPlayInEditorActive()
+{
+	return GEditor && GEditor->PlayWorld != nullptr;
+}
+
+TSet<TWeakObjectPtr<UPackage>> UCygonUsdaFactory::PiePendingSavePackages;
+FDelegateHandle UCygonUsdaFactory::PieEndSaveHandle;
+
+void UCygonUsdaFactory::SavePiePendingPackages(bool /*bIsSimulating*/)
+{
+	if (PieEndSaveHandle.IsValid())
+	{
+		FEditorDelegates::EndPIE.Remove(PieEndSaveHandle);
+		PieEndSaveHandle.Reset();
+	}
+	
+	TArray<UPackage*> Packages;
+	for (const TWeakObjectPtr<UPackage>& WeakPackage : PiePendingSavePackages)
+	{
+		if (UPackage* Package = WeakPackage.Get())
+		{
+			Packages.Add(Package);
+		}
+	}
+	PiePendingSavePackages.Empty();
+
+	if (Packages.Num() > 0)
+	{
+		UEditorLoadingAndSavingUtils::SavePackages(Packages, true);
+	}
 }
 
 void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPtr<UStaticMesh>>& Meshes)
@@ -261,17 +293,38 @@ void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPt
 		BodySetup->InvalidatePhysicsData();
 		BodySetup->CreatePhysicsMeshes();
 		
-		StaticMesh->CreateNavCollision(/*bIsUpdate*/ true);
+		StaticMesh->CreateNavCollision(true);
 		StaticMesh->MarkPackageDirty();
+		
+		for (TObjectIterator<UStaticMeshComponent> CompIt; CompIt; ++CompIt)
+		{
+			if (CompIt->GetStaticMesh() == StaticMesh)
+			{
+				CompIt->RecreatePhysicsState();
+			}
+		}
 		
 		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
 		
 		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Enabled complex-as-simple collision on: %s"), *StaticMesh->GetName());
 	}
 	
-	if (PackagesToSave.Num() > 0)
+	if (PackagesToSave.Num() == 0) return;
+	
+	if (IsPlayInEditorActive())
 	{
-		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, /*bOnlyDirty*/ true);
+		for (UPackage* Package : PackagesToSave)
+		{
+			PiePendingSavePackages.Add(Package);
+		}
+		if (!PieEndSaveHandle.IsValid())
+		{
+			PieEndSaveHandle = FEditorDelegates::EndPIE.AddStatic(&UCygonUsdaFactory::SavePiePendingPackages);
+		}
+	}
+	else
+	{
+		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, true);
 	}
 }
 
