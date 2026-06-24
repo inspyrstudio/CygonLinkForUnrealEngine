@@ -13,6 +13,7 @@
 #include "FileHelpers.h"
 #include "Editor.h"
 #include "TimerManager.h"
+#include "Engine/CollisionProfile.h"
 
 UCygonUsdaFactory::UCygonUsdaFactory()
 {
@@ -250,16 +251,22 @@ void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPt
 		}
 		if (!BodySetup) continue;
 		
-		if (BodySetup->CollisionTraceFlag == CTF_UseComplexAsSimple) continue;
-		
 		StaticMesh->Modify();
 		BodySetup->Modify();
+		BodySetup->RemoveSimpleCollision();
+		BodySetup->bNeverNeedsCookedCollisionData = false;
+		BodySetup->DefaultInstance.SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
 		BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
+		BodySetup->InvalidatePhysicsData();
+		BodySetup->CreatePhysicsMeshes();
+		
+		StaticMesh->CreateNavCollision(/*bIsUpdate*/ true);
 		StaticMesh->MarkPackageDirty();
 		
 		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
 		
-		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Applied complex-as-simple collision to: %s"), *StaticMesh->GetName());
+		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Enabled complex-as-simple collision on: %s"), *StaticMesh->GetName());
 	}
 	
 	if (PackagesToSave.Num() > 0)
