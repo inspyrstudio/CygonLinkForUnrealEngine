@@ -1,4 +1,4 @@
-// Copyright Inspyr Studio, SAS. All Rights Reserved.
+// Copyright 2026 Inspyr Studio, SAS. All Rights Reserved.
 
 #include "CygonImportWatcher.h"
 #include "UCygonUsdaFactory.h"
