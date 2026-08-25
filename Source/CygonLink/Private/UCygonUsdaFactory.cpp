@@ -1,6 +1,7 @@
 // Copyright 2026 Inspyr Studio, SAS. All Rights Reserved.
 
 #include "UCygonUsdaFactory.h"
+#include "CygonUsdImportOptions.h"
 #include "Engine/StaticMesh.h"
 #include "AssetImportTask.h"
 #include "IAssetTools.h"
@@ -8,12 +9,14 @@
 #include "EditorFramework/AssetImportData.h" 
 #include "PhysicsEngine/BodySetup.h"
 #include "Components/StaticMeshComponent.h"
-#include "EditorSupportDelegates.h"
 #include "UObject/UObjectIterator.h"
 #include "FileHelpers.h"
 #include "Editor.h"
 #include "TimerManager.h"
 #include "Engine/CollisionProfile.h"
+#include "HAL/FileManager.h"
+#include "Misc/PackageName.h"
+#include "Misc/StringOutputDevice.h"
 
 UCygonUsdaFactory::UCygonUsdaFactory()
 {
@@ -44,12 +47,11 @@ UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent
     	return nullptr; 
     }
 	
-	FString DestPath = InParent->GetPathName();
-	FString UsdBaseName = FPaths::GetBaseFilename(Filename);
-	
-	if (FPaths::GetPathLeaf(DestPath).Equals(UsdBaseName, ESearchCase::IgnoreCase))
+	FString DestPath;
+	if (!ResolveDestinationPath(Filename, DestPath))
 	{
-		DestPath = FPaths::GetPath(DestPath);
+		bOutCanceled = true;
+		return nullptr;
 	}
 
 	UAssetImportTask* ImportTask = CreateImportTask(Filename, DestPath);
@@ -58,9 +60,11 @@ UObject* UCygonUsdaFactory::FactoryCreateFile(UClass* InClass, UObject* InParent
 	AssetToolsModule.Get().ImportAssetTasks({ ImportTask });
 	
 	const TArray<UObject*> ImportedObjects = ImportTask->GetObjects();
-	ApplyComplexAsSimpleCollision(ImportedObjects);
 	if (ImportedObjects.Num() > 0)
 	{
+		MarkSceneImported(Filename);
+		ApplyComplexAsSimpleCollision(ImportedObjects);
+		
 		return ImportedObjects[0];
 	}
 	
@@ -86,22 +90,14 @@ void UCygonUsdaFactory::SetReimportPaths(UObject* Obj, const TArray<FString>& Ne
 {
 	if (!Obj || NewReimportPaths.Num() == 0) return;
 	
-	FObjectProperty* Prop = FindFProperty<FObjectProperty>(Obj->GetClass(), "AssetImportData");
-	UStaticMesh* SM = Cast<UStaticMesh>(Obj);
-	if (Prop)
+	if (UAssetImportData* ImportData = FindAssetImportData(Obj))
 	{
-		if (UAssetImportData* ImportData = Cast<UAssetImportData>(Prop->GetObjectPropertyValue_InContainer(Obj)))
-			ImportData->UpdateFilenameOnly(NewReimportPaths[0]);
-	}
-	else if (SM)
-	{
-		UAssetImportData* ImportData = SM->GetAssetImportData();
-		if (ImportData)
-			ImportData->UpdateFilenameOnly(NewReimportPaths[0]);
+		ImportData->UpdateFilenameOnly(NewReimportPaths[0]);
 	}
 }
 
 bool UCygonUsdaFactory::bIsHandlingProxyCygonReimport = false;
+TMap<FString, FString> UCygonUsdaFactory::ImportedSceneSignatures;
 
 EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 {
@@ -111,24 +107,21 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	if (SourceFilename.IsEmpty()) return EReimportResult::Failed;
 	if (IsSimpleMesh(SourceFilename)) return EReimportResult::Cancelled;
 	
-	TGuardValue<bool> ReentryGuard(bIsHandlingProxyCygonReimport, true);
-	UE_LOG(LogTemp, Warning, TEXT("Asset update triggered on: %s"), *Obj->GetName());
+	// Every asset the scene produced records the scene as its source, so the reimport manager asks us to
+	// reimport the whole stage once per asset. The first request does the work for all of them.
+	if (IsSceneAlreadyImported(SourceFilename))
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[CygonLink] '%s' is unchanged since it was last imported; the reimport requested for '%s' is already covered."),
+			*SourceFilename, *Obj->GetName());
+		return EReimportResult::Succeeded;
+	}
 	
-	FString UsdBaseName = FPaths::GetBaseFilename(SourceFilename); 
+	FString DestPath;
+	if (!ResolveDestinationPath(SourceFilename, DestPath)) return EReimportResult::Failed;
+	
+	TGuardValue<bool> ReentryGuard(bIsHandlingProxyCygonReimport, true);
+	UE_LOG(LogTemp, Log, TEXT("[CygonLink] Reimporting Cygon scene '%s' into '%s' (requested for '%s')."), *SourceFilename, *DestPath, *Obj->GetName());
     
-	FString DestPath = FPaths::GetPath(Obj->GetPathName());
-    
-	FString SearchFolder = TEXT("/") + UsdBaseName;
-	int32 FoundIndex = DestPath.Find(SearchFolder, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-    
-	if (FoundIndex != INDEX_NONE)
-	{
-		DestPath = DestPath.Left(FoundIndex);
-	}
-	else
-	{
-		DestPath = FPaths::GetPath(Obj->GetPathName());
-	}
 	UAssetImportTask* ImportTask = CreateImportTask(SourceFilename, DestPath);
 	
 	TGuardValue<bool> UnattendedGuard(GIsRunningUnattendedScript, true);
@@ -136,10 +129,13 @@ EReimportResult::Type UCygonUsdaFactory::Reimport(UObject* Obj)
 	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
 	AssetToolsModule.Get().ImportAssetTasks({ ImportTask });
 	
-	if (ImportTask->GetObjects().Num() > 0)
+	const TArray<UObject*> ImportedObjects = ImportTask->GetObjects();
+	if (ImportedObjects.Num() > 0)
 	{
-		ApplyComplexAsSimpleCollision(ImportTask->GetObjects());
-		UE_LOG(LogTemp, Log, TEXT("Asset reimported successfully: %s"), *Obj->GetName());
+		MarkSceneImported(SourceFilename);
+		ApplyComplexAsSimpleCollision(ImportedObjects);
+		
+		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Reimported %d asset(s) from '%s'."), ImportedObjects.Num(), *SourceFilename);
 		return EReimportResult::Succeeded;
 	}
 
@@ -186,22 +182,74 @@ bool UCygonUsdaFactory::IsSimpleMesh(const FString& Filename)
 	return ParentFolderName.Equals(TEXT("meshes"), ESearchCase::IgnoreCase);
 }
 
+UAssetImportData* UCygonUsdaFactory::FindAssetImportData(UObject* Obj)
+{
+	if (!Obj) return nullptr;
+	
+	if (FObjectProperty* Prop = FindFProperty<FObjectProperty>(Obj->GetClass(), "AssetImportData"))
+	{
+		return Cast<UAssetImportData>(Prop->GetObjectPropertyValue_InContainer(Obj));
+	}
+	
+	if (UStaticMesh* StaticMesh = Cast<UStaticMesh>(Obj))
+	{
+		return StaticMesh->GetAssetImportData();
+	}
+	
+	return nullptr;
+}
+
 FString UCygonUsdaFactory::GetSourceFilename(UObject* Obj) const
 {
-	if (!Obj) return TEXT("");
+	if (UAssetImportData* ImportData = FindAssetImportData(Obj))
+	{
+		return ImportData->GetFirstFilename();
+	}
 	
-	FObjectProperty* Prop = FindFProperty<FObjectProperty>(Obj->GetClass(), "AssetImportData");
-	if (Prop)
-	{
-		if (UAssetImportData* ImportData = Cast<UAssetImportData>(Prop->GetObjectPropertyValue_InContainer(Obj)))
-			return ImportData->GetFirstFilename();
-	}
-	else if (UStaticMesh* SM = Cast<UStaticMesh>(Obj))
-	{
-		if (SM->GetAssetImportData())
-			return SM->GetAssetImportData()->GetFirstFilename();
-	}
 	return TEXT("");
+}
+
+bool UCygonUsdaFactory::ResolveDestinationPath(const FString& SourceFilename, FString& OutDestinationPath)
+{
+	const FString FullFilename = FPaths::ConvertRelativePathToFull(SourceFilename);
+	
+	FString PackageName;
+	if (!FPackageName::TryConvertFilenameToLongPackageName(FullFilename, PackageName))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CygonLink] '%s' is not inside a mounted content folder; refusing to import it."), *FullFilename);
+		return false;
+	}
+	
+	OutDestinationPath = FPackageName::GetLongPackagePath(PackageName);
+	
+	// Assets belong to the project and nowhere else. Without this check a destination of `/Engine` writes straight into the engine installation's own Content folder
+	if (OutDestinationPath != TEXT("/Game") && !OutDestinationPath.StartsWith(TEXT("/Game/")))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CygonLink] '%s' resolves to '%s', which is outside the project's Content folder; refusing to import it."), *FullFilename, *OutDestinationPath);
+		return false;
+	}
+	
+	return true;
+}
+
+bool UCygonUsdaFactory::IsSceneAlreadyImported(const FString& SourceFilename)
+{
+	const FFileStatData Stat = IFileManager::Get().GetStatData(*SourceFilename);
+	if (!Stat.bIsValid) return false;
+	
+	const FString Key = FPaths::ConvertRelativePathToFull(SourceFilename).ToLower();
+	const FString* Recorded = ImportedSceneSignatures.Find(Key);
+	
+	return Recorded && *Recorded == FString::Printf(TEXT("%lld|%s"), Stat.FileSize, *Stat.ModificationTime.ToIso8601());
+}
+
+void UCygonUsdaFactory::MarkSceneImported(const FString& SourceFilename)
+{
+	const FFileStatData Stat = IFileManager::Get().GetStatData(*SourceFilename);
+	if (!Stat.bIsValid) return;
+	
+	const FString Key = FPaths::ConvertRelativePathToFull(SourceFilename).ToLower();
+	ImportedSceneSignatures.Add(Key, FString::Printf(TEXT("%lld|%s"), Stat.FileSize, *Stat.ModificationTime.ToIso8601()));
 }
 
 UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, const FString& DestinationPath)
@@ -223,15 +271,36 @@ UAssetImportTask* UCygonUsdaFactory::CreateImportTask(const FString& Filename, c
 	if (UsdOptionsClass)
 	{
 		UObject* ImportOptions = NewObject<UObject>(GetTransientPackage(), UsdOptionsClass);
-		
-		if (FBoolProperty* ImportActorsProp = FindFProperty<FBoolProperty>(UsdOptionsClass, TEXT("bImportActors")))
-		{
-			ImportActorsProp->SetPropertyValue_InContainer(ImportOptions, false);
-		}
-		
+		ApplyDeterministicImportOptions(ImportOptions);
 		ImportTask->Options = ImportOptions;
 	}
 	return ImportTask;
+}
+
+void UCygonUsdaFactory::ApplyDeterministicImportOptions(UObject* ImportOptions)
+{
+	if (!ImportOptions) return;
+	
+	UClass* OptionsClass = ImportOptions->GetClass();
+	
+	// The values, and why they are forced at all, live in CygonUsdImportOptions.h.
+	for (const CygonUsdImportOptions::FPinnedOption& Pinned : CygonUsdImportOptions::PinnedValues)
+	{
+		FProperty* Property = FindFProperty<FProperty>(OptionsClass, Pinned.Name);
+		if (!Property)
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("[CygonLink] USD import option '%s' no longer exists on %s; this machine's EditorPerProjectUserSettings.ini value will be used instead."),
+				Pinned.Name, *OptionsClass->GetName());
+			continue;
+		}
+		
+		FStringOutputDevice ImportErrors;
+		if (Property->ImportText_InContainer(Pinned.Value, ImportOptions, ImportOptions, PPF_None, &ImportErrors) == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[CygonLink] Could not pin USD import option '%s' to '%s': %s"), Pinned.Name, Pinned.Value, *ImportErrors);
+		}
+	}
 }
 
 bool UCygonUsdaFactory::IsPlayInEditorActive()
@@ -269,6 +338,8 @@ void UCygonUsdaFactory::SavePiePendingPackages(bool /*bIsSimulating*/)
 void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPtr<UStaticMesh>>& Meshes)
 {
 	TArray<UPackage*> PackagesToSave;
+	TSet<UStaticMesh*> RefreshedMeshes;
+	RefreshedMeshes.Reserve(Meshes.Num());
 	
 	for (const TWeakObjectPtr<UStaticMesh>& WeakMesh : Meshes)
 	{
@@ -296,20 +367,24 @@ void UCygonUsdaFactory::FinalizeImportedMeshCollision(const TArray<TWeakObjectPt
 		StaticMesh->CreateNavCollision(true);
 		StaticMesh->MarkPackageDirty();
 		
+		RefreshedMeshes.Add(StaticMesh);
+		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
+	}
+	
+	if (RefreshedMeshes.Num() == 0) return;
+	
+	if (IsPlayInEditorActive())
+	{
 		for (TObjectIterator<UStaticMeshComponent> CompIt; CompIt; ++CompIt)
 		{
-			if (CompIt->GetStaticMesh() == StaticMesh)
+			if (RefreshedMeshes.Contains(CompIt->GetStaticMesh()))
 			{
 				CompIt->RecreatePhysicsState();
 			}
 		}
-		
-		PackagesToSave.AddUnique(StaticMesh->GetOutermost());
-		
-		UE_LOG(LogTemp, Log, TEXT("[CygonLink] Enabled complex-as-simple collision on: %s"), *StaticMesh->GetName());
 	}
 	
-	if (PackagesToSave.Num() == 0) return;
+	UE_LOG(LogTemp, Log, TEXT("[CygonLink] Enabled complex-as-simple collision on %d static mesh(es)."), RefreshedMeshes.Num());
 	
 	if (IsPlayInEditorActive())
 	{
